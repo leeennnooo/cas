@@ -22,6 +22,7 @@ import org.hjson.JsonValue;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 
@@ -60,7 +61,10 @@ public class JsonResourceMetadataResolver extends BaseSamlRegisteredServiceMetad
             this.metadataTemplate = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
             val md = samlIdPProperties.getMetadata();
             val location = SpringExpressionLanguageValueResolver.getInstance().resolve(md.getLocation());
-            this.jsonResource = new FileSystemResource(new File(location, "saml-sp-metadata.json"));
+            val normalizedLocation = location.startsWith("file:") ? location : "file:" + location;
+            val resourceLoader = new DefaultResourceLoader();
+            val metadataDir = resourceLoader.getResource(normalizedLocation).getFile();
+            this.jsonResource = new FileSystemResource(new File(metadataDir, "saml-sp-metadata.json"));
             if (this.jsonResource.exists()) {
                 this.metadataMap = readDecisionsFromJsonResource();
                 this.watcherService = new FileWatcherService(jsonResource.getFile(), file -> this.metadataMap = readDecisionsFromJsonResource());
